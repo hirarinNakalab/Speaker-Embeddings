@@ -24,7 +24,7 @@ class FFNet(nn.Module):
         return out
 
 
-class FrobeniusNorm(nn.Module):
+class SimMatrixLoss(nn.Module):
     def __init__(self):
         super().__init__()
         pass
