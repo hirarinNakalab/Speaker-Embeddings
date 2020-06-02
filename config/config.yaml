@@ -1,4 +1,4 @@
-
+training: !!bool "true"
 unprocessed_data: '../japanese_speech_corpus/jvs_ver1/'
 ---
 data:
@@ -23,14 +23,14 @@ model:
 ---
 train:
     N : 4 #Number of speakers in batch
-    M : 5 #Number of utterances per speaker
+    M : 30 #Number of utterances per speaker
     num_workers: 0 #number of workers for dataloader
     lr: 0.01 
-    epochs: 950 #Max training speaker epoch 
+    epochs: 100 #Max training speaker epoch
     log_interval: 30 #Epochs before printing progress
     log_file: './speech_id_checkpoint/Stats'
     checkpoint_interval: 120 #Save model after x speaker epochs
-    checkpoint_dir: './speech_id_checkpoint'
+    checkpoint_dir: './model'
     restore: !!bool "false" #Resume training from previous model path
 ---
 test:
