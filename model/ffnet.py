@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
-
+import pandas as pd
 
 
 class FFNet(nn.Module):
@@ -25,9 +25,14 @@ class FFNet(nn.Module):
 
 
 class SimMatrixLoss(nn.Module):
-    def __init__(self):
+    def __init__(self, sim_csv_path):
         super().__init__()
+        self.simmat = self.get_normalized_simmatrix(sim_csv_path)
         pass
+
+    def get_normalized_simmatrix(self, path):
+        simmat = pd.read_csv(path)
+        return simmat
 
     def forward(self, x):
         pass

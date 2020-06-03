@@ -7,6 +7,7 @@ data:
     test_path: './data/test_tisv'
     test_path_unprocessed: './TIMIT/TEST/*/*/*.wav'
     gender_data_path: 'data/gender_f0range.txt'
+    sim_csv_path: 'data/speaker_similarity_'
     contents: 'nonpara30/wav24kHz16bit'
     data_preprocessed: !!bool "true" 
     sr: 16000
@@ -25,6 +26,8 @@ train:
     N : 4 #Number of speakers in batch
     M : 30 #Number of utterances per speaker
     num_workers: 0 #number of workers for dataloader
+    num_input_flames: 5
+    num_mel_dimension: 39
     lr: 0.01 
     epochs: 100 #Max training speaker epoch
     log_interval: 30 #Epochs before printing progress

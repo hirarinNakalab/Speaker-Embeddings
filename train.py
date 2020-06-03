@@ -26,7 +26,7 @@ def train(model_path):
     if hp.train.restore:
         net.load_state_dict(torch.load(model_path))
     simmat_loss = SimMatrixLoss(device)
-    #Both net and loss have trainable parameters
+
     optimizer = torch.optim.Adagrad(net.parameters(), lr=hp.train.lr)
     
     os.makedirs(hp.train.checkpoint_dir, exist_ok=True)
@@ -35,7 +35,8 @@ def train(model_path):
     iteration = 0
     for e in range(hp.train.epochs):
         total_loss = 0
-        for batch_id, mel_db_batch in enumerate(train_loader): 
+        for batch_id, batch in enumerate(train_loader):
+            utters_list, selected_speaker = batch
             mel_db_batch = mel_db_batch.to(device)
             
             mel_db_batch = torch.reshape(mel_db_batch, (hp.train.N*hp.train.M, mel_db_batch.size(2), mel_db_batch.size(3)))
@@ -123,29 +124,6 @@ def main(model_path):
             
             sim_matrix = get_cossim(verification_embeddings, enrollment_centroids)
             
-            # calculating EER
-            diff = 1; EER=0; EER_thresh = 0; EER_FAR=0; EER_FRR=0
-            
-            for thres in [0.01*i+0.5 for i in range(50)]:
-                sim_matrix_thresh = sim_matrix>thres
-                
-                FAR = (sum([sim_matrix_thresh[i].float().sum()-sim_matrix_thresh[i,:,i].float().sum() for i in range(int(hp.test.N))])
-                /(hp.test.N-1.0)/(float(hp.test.M/2))/hp.test.N)
-    
-                FRR = (sum([hp.test.M/2-sim_matrix_thresh[i,:,i].float().sum() for i in range(int(hp.test.N))])
-                /(float(hp.test.M/2))/hp.test.N)
-                
-                # Save threshold when FAR = FRR (=EER)
-                if diff> abs(FAR-FRR):
-                    diff = abs(FAR-FRR)
-                    EER = (FAR+FRR)/2
-                    EER_thresh = thres
-                    EER_FAR = FAR
-                    EER_FRR = FRR
-            batch_avg_EER += EER
-            print("\nEER : %0.2f (thres:%0.2f, FAR:%0.2f, FRR:%0.2f)"%(EER,EER_thresh,EER_FAR,EER_FRR))
-        avg_EER += batch_avg_EER/(batch_id+1)
-    avg_EER = avg_EER / hp.test.epochs
     print("\n EER across {0} epochs: {1:.4f}".format(hp.test.epochs, avg_EER))
         
 if __name__=="__main__":
