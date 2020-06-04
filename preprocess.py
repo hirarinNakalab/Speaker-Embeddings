@@ -31,6 +31,24 @@ def get_para(data, fs):
     mcep = sp2mc(sp)
     return fo, mcep
 
+def wav_to_mcep(audio_path):
+    mceps = []
+    for i, utter_path in enumerate(audio_path):
+        wav, source_sr = librosa.load(utter_path, sr=None)
+        # Resample the wav to 16kHz
+        wav = librosa.resample(wav, source_sr, hp.data.sr)
+        wav = wav.astype(np.float)
+
+        fo, mcep = get_para(wav, fs=hp.data.sr)
+        # remove silence using fo info
+        mask = fo.astype(np.bool)
+        mcep = mcep[mask, 1:]
+
+        mceps.append(mcep)
+    return mceps
+
+
+
 def main():
     print("start text independent utterance feature extraction...\n")
     os.makedirs(hp.data.train_path, exist_ok=True)   # make folder to save train file
@@ -68,22 +86,6 @@ def main():
                 os.makedirs(save_dir.format(hp.data.test_path), exist_ok=True)
                 for i, mcep in enumerate(mceps, start=1):
                     np.save(save_path.format(hp.data.test_path, i), mcep)
-
-def wav_to_mcep(audio_path):
-    mceps = []
-    for i, utter_path in enumerate(audio_path):
-        wav, source_sr = librosa.load(utter_path, sr=None)
-        # Resample the wav to 16kHz
-        wav = librosa.resample(wav, source_sr, hp.data.sr)
-        wav = wav.astype(np.float)
-
-        fo, mcep = get_para(wav, fs=hp.data.sr)
-        # remove silence using fo info
-        mask = fo.astype(np.bool)
-        mcep = mcep[mask, 1:]
-
-        mceps.append(mcep)
-    return mceps
 
 
 
