@@ -6,8 +6,7 @@ data:
     train_path_unprocessed: './TIMIT/TRAIN/*/*/*.wav'
     test_path: './data/test_tisv'
     test_path_unprocessed: './TIMIT/TEST/*/*/*.wav'
-    gender_data_path: 'data/gender_f0range.txt'
-    sim_csv_path: 'data/speaker_similarity_'
+    sim_csv_path: 'data/speaker_similarity_{}.csv'
     contents: 'nonpara30/wav24kHz16bit'
     data_preprocessed: !!bool "true" 
     sr: 16000

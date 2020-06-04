@@ -4,22 +4,21 @@ import librosa
 from pysptk import conversion
 import pyworld as pw
 import numpy as np
+import pandas as pd
 from hparam import hparam as hp
 
 
 
-def get_speaker_list():
-    males, females = [], []
-    with open(hp.data.gender_data_path, "r") as f:
-        lines = f.readlines()
-        for i, line in enumerate(lines):
-            if i == 0: continue
-            values = line.strip().split(" ")
-            if values[1] == "M":
-                males.append(values[0])
-            else:
-                females.append(values[0])
-    return males, females
+def get_speakers_dict():
+    genders_dict = {}
+    genders = "male female".split()
+    for gender in genders:
+        csv_path = hp.data.sim_csv_path.format(gender)
+        df = pd.read_csv(csv_path, header=None, index_col=0)
+        speakers_dict = {speaker: index
+                         for index, speaker in enumerate(df.index)}
+        genders_dict[gender] = speakers_dict
+    return genders_dict
 
 def sp2mc(sp, order=39, alpha=0.41):   # alpha is all-pass constant
     mcep = conversion.sp2mc(sp, order, alpha)
@@ -33,51 +32,58 @@ def get_para(data, fs):
     return fo, mcep
 
 def main():
-    print("start text independent utterance feature extraction")
+    print("start text independent utterance feature extraction...\n")
     os.makedirs(hp.data.train_path, exist_ok=True)   # make folder to save train file
     os.makedirs(hp.data.test_path, exist_ok=True)    # make folder to save test file
 
-    males, females = get_speaker_list()
-    n_total_males = len(males)
-    n_total_females = len(females)
-    n_train_males = (n_total_males//10)*9            # split total data 90% train and 10% test
-    n_train_females = (n_total_females//10)*9            # split total data 90% train and 10% test
+    genders_dict = get_speakers_dict()
+    n_totals = {gender: len(genders_dict[gender])
+               for gender in genders_dict.keys()}
+    n_trains = {gender: (n_totals[gender]//10)*9
+               for gender in genders_dict.keys()} # split total data 90% train and 10% test
 
-    print("total male speaker number : %d" % n_total_males)
-    print("train : %d, test : %d" % (n_train_males, n_total_males - n_train_males))
-    print("total female speaker number : %d" % n_total_females)
-    print("train : %d, test : %d" % (n_train_females, n_total_females - n_train_females))
+    for gender in genders_dict.keys():
+        print("total {} speaker number : {}".format(gender, n_totals[gender]))
+        print("train : {}, test : {}\n".format(
+            n_trains[gender], n_totals[gender] - n_trains[gender]))
 
-
-    for gender, n_train in zip([males, females], [n_train_males, n_train_females]):
-        for i, speaker in enumerate(gender):
-            print("%dth speaker processing..." % i)
+    for gender in genders_dict.keys():
+        speakers = genders_dict[gender]
+        n_train = n_trains[gender]
+        for i, speaker in enumerate(speakers.keys()):
+            print("%dth speaker processing..." % (i + 1))
             speaker_path = os.path.join(hp.unprocessed_data,
                                         speaker, hp.data.contents, '*.wav')
             audio_path = glob.glob(speaker_path)
-            mcep = wav_to_mcep(audio_path)
+            mceps = wav_to_mcep(audio_path)
 
-            if i < n_train:  # save mcep as numpy file
-                np.save(os.path.join(hp.data.train_path, f"{speaker}.npy"), mcep)
+            # save mcep as numpy file
+            save_dir = os.path.join("{}", speaker)
+            save_path = os.path.join(save_dir, "utter{:02d}.npy")
+            if i < n_train:
+                os.makedirs(save_dir.format(hp.data.train_path), exist_ok=True)
+                for i, mcep in enumerate(mceps, start=1):
+                    np.save(save_path.format(hp.data.train_path, i), mcep)
             else:
-                np.save(os.path.join(hp.data.test_path, f"{speaker}.npy"), mcep)
+                os.makedirs(save_dir.format(hp.data.test_path), exist_ok=True)
+                for i, mcep in enumerate(mceps, start=1):
+                    np.save(save_path.format(hp.data.test_path, i), mcep)
 
 def wav_to_mcep(audio_path):
-    utterances_spec = []
-
+    mceps = []
     for i, utter_path in enumerate(audio_path):
         wav, source_sr = librosa.load(utter_path, sr=None)
-        wav = librosa.resample(wav, source_sr, hp.data.sr).astype(np.float) # Resample the wav
+        # Resample the wav to 16kHz
+        wav = librosa.resample(wav, source_sr, hp.data.sr)
+        wav = wav.astype(np.float)
 
         fo, mcep = get_para(wav, fs=hp.data.sr)
+        # remove silence using fo info
         mask = fo.astype(np.bool)
         mcep = mcep[mask, 1:]
 
-        utterances_spec.append(mcep)
-
-    utterances_spec = np.concatenate(utterances_spec, axis=0)
-    print(utterances_spec.shape)
-    return utterances_spec
+        mceps.append(mcep)
+    return mceps
 
 
 
