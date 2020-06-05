@@ -5,27 +5,31 @@ import torch
 from torch.utils.data import DataLoader
 
 from hparam import hparam as hp
-from dataloader import SpeakerDatasetJVS, SpeakerDatasetJVSPreprocessed
+from dataloader import JVSDataset, JVSDatasetPreprocessed
 from model import FFNet, SimMatrixLoss
 from speech_embedder_net import SpeechEmbedder, GE2ELoss, get_centroids, get_cossim
+from preprocess import get_speakers_dict
 
 
 
-def train(model_path):
+def train():
     device = torch.device(hp.device)
-    
+
+    gender = "female"
+    spekers_dict = get_speakers_dict()[gender]
+
     if hp.data.data_preprocessed:
-        train_dataset = SpeakerDatasetJVSPreprocessed()
+        train_dataset = JVSDatasetPreprocessed(spekers_dict=spekers_dict)
     else:
-        train_dataset = SpeakerDatasetJVS()
+        train_dataset = JVSDataset()
 
     train_loader = DataLoader(train_dataset, batch_size=hp.train.N, shuffle=True,
                               num_workers=hp.train.num_workers, drop_last=True)
     
     net = FFNet().to(device)
     if hp.train.restore:
-        net.load_state_dict(torch.load(model_path))
-    simmat_loss = SimMatrixLoss(device)
+        net.load_state_dict(torch.load(model_path=None))
+    # simmat_loss = SimMatrixLoss(device)
 
     optimizer = torch.optim.Adagrad(net.parameters(), lr=hp.train.lr)
     
@@ -86,9 +90,9 @@ def train(model_path):
 def main(model_path):
     
     if hp.data.data_preprocessed:
-        test_dataset = SpeakerDatasetJVSPreprocessed()
+        test_dataset = JVSDatasetPreprocessed()
     else:
-        test_dataset = SpeakerDatasetJVS()
+        test_dataset = JVSDataset()
 
     test_loader = DataLoader(test_dataset, batch_size=hp.test.N, shuffle=True,
                              num_workers=hp.test.num_workers, drop_last=True)
@@ -127,4 +131,4 @@ def main(model_path):
     print("\n EER across {0} epochs: {1:.4f}".format(hp.test.epochs, avg_EER))
         
 if __name__=="__main__":
-    main()
+    train()

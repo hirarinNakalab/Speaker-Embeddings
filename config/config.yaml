@@ -1,3 +1,4 @@
+device: "cuda"
 training: !!bool "true"
 unprocessed_data: '../japanese_speech_corpus/jvs_ver1/'
 ---
@@ -25,8 +26,8 @@ train:
     N : 4 #Number of speakers in batch
     M : 30 #Number of utterances per speaker
     num_workers: 0 #number of workers for dataloader
-    num_input_flames: 5
-    num_mel_dimension: 39
+    num_input_size: 5
+    num_mel_dim: 39
     lr: 0.01 
     epochs: 100 #Max training speaker epoch
     log_interval: 30 #Epochs before printing progress

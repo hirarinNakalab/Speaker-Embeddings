@@ -11,7 +11,7 @@ from utils import mfccs_and_spec
 
 
 
-class SpeakerDatasetJVS(Dataset):
+class JVSDataset(Dataset):
     
     def __init__(self):
 
@@ -39,30 +39,45 @@ class SpeakerDatasetJVS(Dataset):
 
 
 
-class SpeakerDatasetJVSPreprocessed(Dataset):
+class JVSDatasetPreprocessed(Dataset):
     
-    def __init__(self, spekers_list, shuffle=True):
+    def __init__(self, spekers_dict, shuffle=True):
         # data path
         self.path = hp.data.train_path if hp.training else hp.data.test_path
-        self.spekers_list = spekers_list
+        self.index2sp = {index: speaker for speaker, index in spekers_dict.items()}
         self.shuffle = shuffle
 
     def __len__(self):
-        return len(self.spekers_list)
+        return len(self.index2sp)
 
     def __getitem__(self, idx):
+        sizes = []
+        for i, file in enumerate(glob.glob('./data/*/*/*.npy')):
+            if i == 2152:
+                print("")
+                print("")
+            arr = np.load(file)
+            size = arr.shape[0]
+            sizes.append(size)
+        max_size = max(sizes)
+        pass
         if self.shuffle:
-            selected_speaker = random.sample(self.spekers_list, 1)[0]  # select random speaker
+            selected_index, = random.sample(self.index2sp.keys(), 1)  # select random speaker
+            selected_speaker = self.index2sp[selected_index]
         else:
-            selected_speaker = self.spekers_list[idx]
+            selected_speaker = self.index2sp[idx]
 
         utters_list = []
-        for utter in os.listdir(os.path.join(self.path, selected_speaker)):
+        search_path = os.path.join(self.path, selected_speaker, '*.npy')
+        for utter in glob.glob(search_path):
             utterance = np.load(utter)  # load utterance spectrogram of selected speaker
             flames = utterance.shape[0]
+
             # reshape to [n_flames, n_input_feat(5*39=195)]
-            utterance = utterance[:(flames // hp.num_input_flames) * hp.num_input_flames, :]
-            utterance = utterance.reshape(-1, hp.num_input_flames * hp.num_mel_dimension)
+            input_size = hp.train.num_input_size
+            mel_dim = hp.train.num_mel_dim
+            utterance = utterance[:(flames // input_size) * input_size, :]
+            utterance = utterance.reshape(-1, input_size * mel_dim)
             utterance = torch.tensor(utterance)
             utters_list.append(utterance)
 
