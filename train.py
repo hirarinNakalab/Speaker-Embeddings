@@ -15,20 +15,22 @@ from preprocess import get_speakers_dict
 def train():
     device = torch.device(hp.device)
 
+    net = FFNet().to(device)
+    if hp.train.restore:
+        net.load_state_dict(torch.load(model_path=None))
+
     gender = "female"
     spekers_dict = get_speakers_dict()[gender]
 
     if hp.data.data_preprocessed:
-        train_dataset = JVSDatasetPreprocessed(spekers_dict=spekers_dict)
+        train_dataset = JVSDatasetPreprocessed(
+            spekers_dict=spekers_dict, device=device, model=net)
     else:
         train_dataset = JVSDataset()
 
     train_loader = DataLoader(train_dataset, batch_size=hp.train.N, shuffle=True,
                               num_workers=hp.train.num_workers, drop_last=True)
-    
-    net = FFNet().to(device)
-    if hp.train.restore:
-        net.load_state_dict(torch.load(model_path=None))
+
     # simmat_loss = SimMatrixLoss(device)
 
     optimizer = torch.optim.Adagrad(net.parameters(), lr=hp.train.lr)

@@ -37,39 +37,43 @@ class JVSDataset(Dataset):
             mel_dbs.append(mel_db)
         return torch.Tensor(mel_dbs)
 
-
+def get_max_flames():
+    sizes = []
+    for i, file in enumerate(glob.glob('./data/*/*/*.npy')):
+        arr = np.load(file)
+        size = arr.shape[0]
+        sizes.append(size)
+    max_size = max(sizes)
+    return max_size
 
 class JVSDatasetPreprocessed(Dataset):
     
-    def __init__(self, spekers_dict, shuffle=True):
+    def __init__(self, spekers_dict, device, model, shuffle=True):
         # data path
         self.path = hp.data.train_path if hp.training else hp.data.test_path
         self.index2sp = {index: speaker for speaker, index in spekers_dict.items()}
         self.shuffle = shuffle
+        self.device = device
+        self.model = model
 
     def __len__(self):
         return len(self.index2sp)
 
+    def _get_dvector(self, utterance):
+        outputs = self.model(utterance)
+        return torch.mean(outputs, dim=0, keepdim=False)
+
     def __getitem__(self, idx):
-        sizes = []
-        for i, file in enumerate(glob.glob('./data/*/*/*.npy')):
-            if i == 2152:
-                print("")
-                print("")
-            arr = np.load(file)
-            size = arr.shape[0]
-            sizes.append(size)
-        max_size = max(sizes)
-        pass
         if self.shuffle:
             selected_index, = random.sample(self.index2sp.keys(), 1)  # select random speaker
             selected_speaker = self.index2sp[selected_index]
         else:
             selected_speaker = self.index2sp[idx]
 
-        utters_list = []
+        d_vectors = []
         search_path = os.path.join(self.path, selected_speaker, '*.npy')
-        for utter in glob.glob(search_path):
+        utters = random.sample(glob.glob(search_path), hp.train.M)  # select random speaker
+        for utter in utters:
             utterance = np.load(utter)  # load utterance spectrogram of selected speaker
             flames = utterance.shape[0]
 
@@ -78,7 +82,9 @@ class JVSDatasetPreprocessed(Dataset):
             mel_dim = hp.train.num_mel_dim
             utterance = utterance[:(flames // input_size) * input_size, :]
             utterance = utterance.reshape(-1, input_size * mel_dim)
-            utterance = torch.tensor(utterance)
-            utters_list.append(utterance)
+            utterance = torch.tensor(utterance).to(self.device)
 
-        return utters_list, selected_speaker
+            d_vector = self._get_dvector(utterance)
+            d_vectors.append(d_vector)
+
+        return d_vectors, selected_speaker
