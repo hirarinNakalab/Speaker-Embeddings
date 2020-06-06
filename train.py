@@ -53,10 +53,7 @@ def train():
                        f"Iteration:{iteration}\t" \
                        f"Loss:{loss:.4f}\tTLoss:{total_loss / (batch_id + 1):.4f}\t\n"
                 print(mesg)
-                if hp.train.log_file is not None:
-                    with open(hp.train.log_file,'a') as f:
-                        f.write(mesg)
-                    
+
         if hp.train.checkpoint_dir is not None and (e + 1) % hp.train.checkpoint_interval == 0:
             net.eval().cpu()
             ckpt_model_filename = f"ckpt_epoch_{e+1}_batch_id_{batch_id+1}.pth"
