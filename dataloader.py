@@ -53,7 +53,7 @@ class JVSDataset(Dataset):
         mel = mel[:(flames // self.input_size) * self.input_size, :]
         mel = mel.reshape(-1, self.input_size * self.mel_dim)
         mel = standardization(mel, axis=1)
-        return torch.tensor(mel).float().to(self.device)
+        return torch.Tensor(mel).to(self.device)
 
     def __getitem__(self, idx):
         selected_speaker = self.index2sp[idx]

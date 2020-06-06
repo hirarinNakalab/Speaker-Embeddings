@@ -65,7 +65,7 @@ class SimMatrixLoss(nn.Module):
             row, col = ret_ids[i], ret_ids[j]
             val = self.simmat[i, j]
             ret[row, col] = val
-        return torch.tensor(ret).float().to(self.device)
+        return torch.Tensor(ret).to(self.device)
 
     def _loss_simmat_re(self, Kd, S):
         W = (S > 0).float().to(self.device)
