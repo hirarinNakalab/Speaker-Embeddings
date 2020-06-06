@@ -82,7 +82,7 @@ class JVSDatasetPreprocessed(Dataset):
             mel_dim = hp.train.num_mel_dim
             utterance = utterance[:(flames // input_size) * input_size, :]
             utterance = utterance.reshape(-1, input_size * mel_dim)
-            utterance = torch.tensor(utterance).to(self.device)
+            utterance = torch.tensor(utterance).to(self.device).float()
 
             d_vector = self._get_dvector(utterance)
             d_vectors.append(d_vector)
