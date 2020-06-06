@@ -7,35 +7,8 @@ import torch
 from torch.utils.data import Dataset
 
 from hparam import hparam as hp
-from utils import mfccs_and_spec
 
 
-
-class JVSDataset(Dataset):
-    
-    def __init__(self):
-
-        if hp.training:
-            self.path = hp.data.train_path_unprocessed
-        else:
-            self.path = hp.data.test_path_unprocessed
-        self.speakers = glob.glob(os.path.dirname(self.path))
-        shuffle(self.speakers)
-        
-    def __len__(self):
-        return len(self.speakers)
-
-    def __getitem__(self, idx):
-        speaker = self.speakers[idx]
-        wav_files = glob.glob(speaker+'/*.WAV')
-        shuffle(wav_files)
-        wav_files = wav_files[0:self.utterance_number]
-        
-        mel_dbs = []
-        for f in wav_files:
-            _, mel_db, _ = mfccs_and_spec(f, wav_process = True)
-            mel_dbs.append(mel_db)
-        return torch.Tensor(mel_dbs)
 
 def get_max_flames():
     sizes = []
@@ -46,12 +19,23 @@ def get_max_flames():
     max_size = max(sizes)
     return max_size
 
-class JVSDatasetPreprocessed(Dataset):
+def standardization(x, axis=None, ddof=0):
+    x_mean = x.mean(axis=axis, keepdims=True)
+    x_std = x.std(axis=axis, keepdims=True, ddof=ddof)
+    return (x - x_mean) / x_std
+
+
+
+class JVSDataset(Dataset):
     
-    def __init__(self, spekers_dict, device, model, shuffle=True):
+    def __init__(self, spekers_dict, device, model):
         # data path
         self.path = hp.data.train_path if hp.training else hp.data.test_path
-        self.index2sp = {index: speaker for speaker, index in spekers_dict.items()}
+        self.index2sp = {index: speaker
+                         for speaker, index in spekers_dict.items()
+                         if index < (len(spekers_dict)//10)*9}
+        self.input_size = hp.train.num_input_size
+        self.mel_dim = hp.train.num_mel_dim
         self.shuffle = shuffle
         self.device = device
         self.model = model
@@ -63,28 +47,26 @@ class JVSDatasetPreprocessed(Dataset):
         outputs = self.model(utterance)
         return torch.mean(outputs, dim=0, keepdim=False)
 
+    def _mel_to_tensor(self, mel):
+        flames = mel.shape[0]
+        # reshape to [n_flames, n_input_feat(5*39=195)]
+        mel = mel[:(flames // self.input_size) * self.input_size, :]
+        mel = mel.reshape(-1, self.input_size * self.mel_dim)
+        mel = standardization(mel, axis=1)
+        return torch.tensor(mel).float().to(self.device)
+
     def __getitem__(self, idx):
-        if self.shuffle:
-            selected_index, = random.sample(self.index2sp.keys(), 1)  # select random speaker
-            selected_speaker = self.index2sp[selected_index]
-        else:
-            selected_speaker = self.index2sp[idx]
+        selected_speaker = self.index2sp[idx]
 
         d_vectors = []
         search_path = os.path.join(self.path, selected_speaker, '*.npy')
-        utters = random.sample(glob.glob(search_path), hp.train.M)  # select random speaker
+        # select random utterances
+        utters = random.sample(glob.glob(search_path), hp.train.M)
         for utter in utters:
-            utterance = np.load(utter)  # load utterance spectrogram of selected speaker
-            flames = utterance.shape[0]
-
-            # reshape to [n_flames, n_input_feat(5*39=195)]
-            input_size = hp.train.num_input_size
-            mel_dim = hp.train.num_mel_dim
-            utterance = utterance[:(flames // input_size) * input_size, :]
-            utterance = utterance.reshape(-1, input_size * mel_dim)
-            utterance = torch.tensor(utterance).to(self.device).float()
-
-            d_vector = self._get_dvector(utterance)
+            # load utterance spectrogram of selected speaker
+            utterance = np.load(utter)
+            mel = self._mel_to_tensor(utterance)
+            d_vector = self._get_dvector(mel)
             d_vectors.append(d_vector)
 
         return d_vectors, selected_speaker

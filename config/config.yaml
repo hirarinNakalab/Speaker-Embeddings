@@ -9,7 +9,6 @@ data:
     test_path_unprocessed: './TIMIT/TEST/*/*/*.wav'
     sim_csv_path: 'data/speaker_similarity_{}.csv'
     contents: 'nonpara30/wav24kHz16bit'
-    data_preprocessed: !!bool "true" 
     sr: 16000
     nfft: 512 #For mel spectrogram preprocess
     window: 0.005 #(s)

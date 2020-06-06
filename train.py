@@ -5,9 +5,8 @@ import torch
 from torch.utils.data import DataLoader
 
 from hparam import hparam as hp
-from dataloader import JVSDataset, JVSDatasetPreprocessed
+from dataloader import JVSDataset
 from model import FFNet, SimMatrixLoss
-from speech_embedder_net import SpeechEmbedder, GE2ELoss, get_centroids, get_cossim
 from preprocess import get_speakers_dict
 
 
@@ -20,18 +19,14 @@ def train():
         net.load_state_dict(torch.load(model_path=None))
 
     gender = "female"
+    sim_csv_path = hp.data.sim_csv_path.format(gender)
     spekers_dict = get_speakers_dict()[gender]
 
-    if hp.data.data_preprocessed:
-        train_dataset = JVSDatasetPreprocessed(
-            spekers_dict=spekers_dict, device=device, model=net)
-    else:
-        train_dataset = JVSDataset()
-
+    train_dataset = JVSDataset(spekers_dict, device, net)
     train_loader = DataLoader(train_dataset, batch_size=hp.train.N, shuffle=True,
                               num_workers=hp.train.num_workers, drop_last=True)
 
-    simmat_loss = SimMatrixLoss(device)
+    simmat_loss = SimMatrixLoss(device, sim_csv_path=sim_csv_path)
     optimizer = torch.optim.Adagrad(net.parameters(), lr=hp.train.lr)
     
     os.makedirs(hp.train.checkpoint_dir, exist_ok=True)
@@ -78,12 +73,7 @@ def train():
     print("\nDone, trained model saved at", save_model_path)
 
 def main(model_path):
-    
-    if hp.data.data_preprocessed:
-        test_dataset = JVSDatasetPreprocessed()
-    else:
-        test_dataset = JVSDataset()
-
+    test_dataset = JVSDataset()
     test_loader = DataLoader(test_dataset, batch_size=hp.test.N, shuffle=True,
                              num_workers=hp.test.num_workers, drop_last=True)
     
@@ -114,11 +104,6 @@ def main(model_path):
             enrollment_embeddings = torch.reshape(enrollment_embeddings, (hp.test.N, hp.test.M//2, enrollment_embeddings.size(1)))
             verification_embeddings = torch.reshape(verification_embeddings, (hp.test.N, hp.test.M//2, verification_embeddings.size(1)))
             
-            enrollment_centroids = get_centroids(enrollment_embeddings)
-            
-            sim_matrix = get_cossim(verification_embeddings, enrollment_centroids)
-            
-    print("\n EER across {0} epochs: {1:.4f}".format(hp.test.epochs, avg_EER))
-        
+
 if __name__=="__main__":
     train()
