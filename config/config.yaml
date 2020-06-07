@@ -21,7 +21,7 @@ train:
     lr: 0.01 
     epochs: 100 #Max training speaker epoch
     log_interval: 1 #Epochs before printing progress
-    checkpoint_interval: 120 #Save model after x speaker epochs
+    checkpoint_interval: 20 #Save model after x speaker epochs
     checkpoint_dir: './model'
     restore: !!bool "false" #Resume training from previous model path
 ---

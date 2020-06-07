@@ -60,14 +60,14 @@ def train():
 
         if hp.train.checkpoint_dir is not None and (e + 1) % hp.train.checkpoint_interval == 0:
             net.eval().cpu()
-            ckpt_model_filename = f"ckpt_epoch_{e+1}_batch_id_{batch_id+1}.pth"
+            ckpt_model_filename = f"ckpt_epoch_{e+1}.pth"
             ckpt_model_path = os.path.join(hp.train.checkpoint_dir, ckpt_model_filename)
             torch.save(net.state_dict(), ckpt_model_path)
             net.to(device).train()
 
     #save model
     net.eval().cpu()
-    save_model_filename = f"final_epoch_{e + 1}_batch_id_{batch_id + 1}.model"
+    save_model_filename = f"final_epoch_{e + 1}.model"
     save_model_path = os.path.join(hp.train.checkpoint_dir, save_model_filename)
     torch.save(net.state_dict(), save_model_path)
     
