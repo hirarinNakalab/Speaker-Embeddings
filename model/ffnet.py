@@ -66,8 +66,8 @@ class SimMatrixLoss(nn.Module):
         for i, j in itertools.product(sp_ids, sp_ids):
             row, col = ret_ids[i], ret_ids[j]
             sim_val = self.simmat[i, j]
-            part_simmat[row, col] = sim_val
             W_val = self.W[i, j]
+            part_simmat[row, col] = sim_val
             part_W[row, col] = W_val
 
         return torch.Tensor(part_simmat).to(self.device), torch.Tensor(part_W).to(self.device)
@@ -82,7 +82,7 @@ class SimMatrixLoss(nn.Module):
         diff_normed = torch.mul(W, diff)
         numer = torch.norm(diff_normed, p="fro")
 
-        loss = 2 * (numer / denom) if not torch.isnan(denom) else torch.ze
+        loss = 2 * (numer / denom)
         return loss
 
 
