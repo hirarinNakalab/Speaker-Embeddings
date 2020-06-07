@@ -4,25 +4,16 @@ unprocessed_data: '../japanese_speech_corpus/jvs_ver1/'
 ---
 data:
     train_path: './data/train_tisv'
-    train_path_unprocessed: './TIMIT/TRAIN/*/*/*.wav'
     test_path: './data/test_tisv'
-    test_path_unprocessed: './TIMIT/TEST/*/*/*.wav'
     sim_csv_path: 'data/speaker_similarity_{}.csv'
     contents: 'nonpara30/wav24kHz16bit'
     sr: 16000
-    nfft: 512 #For mel spectrogram preprocess
-    window: 0.005 #(s)
-    hop: 0.01 #(s)
-    nmels: 40 #Number of mel energies
 ---
 model:
-    hidden: 768 #Number of LSTM hidden layer units
-    num_layer: 3 #Number of LSTM layers
-    proj: 256 #Embedding size
-    model_path: './model.model' #Model path for testing, inference, or resuming training
+    model_path: './model/ffnet.model' #Model path for testing, inference, or resuming training
 ---
 train:
-    N : 4 #Number of speakers in batch
+    N : 10 #Number of speakers in batch
     M : 30 #Number of utterances per speaker in batch
     num_workers: 0 #number of workers for dataloader
     num_input_size: 5

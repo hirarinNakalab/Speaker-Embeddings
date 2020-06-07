@@ -1,7 +1,8 @@
 import os
 import random
-import time
 import torch
+import warnings
+warnings.simplefilter('ignore')
 from torch.utils.data import DataLoader
 
 from hparam import hparam as hp
@@ -33,6 +34,7 @@ def train():
     
     net.train()
     iteration = 0
+    print('=' * 30)
     for e in range(hp.train.epochs):
         total_loss = 0
         for batch_id, batch in enumerate(train_loader):
@@ -42,17 +44,19 @@ def train():
             optimizer.zero_grad()
             #get loss, call backward, step optimizer
             loss = simmat_loss(d_vectors, speakers)
-            loss.backward()
-            optimizer.step()
-            
-            total_loss = total_loss + loss
+            if not torch.isnan(loss):
+                loss.backward()
+                optimizer.step()
+                total_loss = total_loss + loss
+
             iteration += 1
             if (batch_id + 1) % hp.train.log_interval == 0:
-                mesg = f"{time.ctime()}\t" \
-                       f"Epoch:{e + 1}[{batch_id + 1}/{len(train_dataset) // hp.train.N}]," \
+                mesg = f"Epoch:{e + 1}[{batch_id + 1}/{len(train_dataset) // hp.train.N}]," \
                        f"Iteration:{iteration}\t" \
-                       f"Loss:{loss:.4f}\tTLoss:{total_loss / (batch_id + 1):.4f}\t\n"
+                       f"Loss:{loss:.4f}\tTotal Loss:{total_loss / (batch_id + 1):.4f}"
                 print(mesg)
+
+        print('='*30)
 
         if hp.train.checkpoint_dir is not None and (e + 1) % hp.train.checkpoint_interval == 0:
             net.eval().cpu()
