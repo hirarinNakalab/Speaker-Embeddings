@@ -1,11 +1,9 @@
-import itertools
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 
@@ -42,42 +40,37 @@ class SimMatrixLoss(nn.Module):
         self.device = device
         self.max_similarity = 1.0
         self.scaler = MinMaxScaler()
-        self.simmat = self._get_normalized_simmatrix(sim_csv_path)
         self.gamma = gamma
+
+        self._get_normalized_simmatrix(sim_csv_path)
 
     def _get_normalized_simmatrix(self, path):
         simmat = pd.read_csv(path, header=None, index_col=0)
         self.sp2idx = {speaker: index
                        for index, speaker in enumerate(simmat.index)}
-        self.W = np.array(simmat > 0).astype(np.float)
+
+        W = np.array(simmat > 0).astype(np.float)
+        self.W = torch.Tensor(W).to(self.device)
         simmat = self.scaler.fit_transform(simmat)
-        return simmat
+        self.simmat = torch.Tensor(simmat).to(self.device)
 
     def _gaussian_kernel(self, di, dj):
-        return torch.exp(-self.gamma * torch.norm(di - dj, 2))
-
-    def _get_partial_simmatrix(self, speakers):
-        Ns = len(speakers)
-        sp_ids = [self.sp2idx[sp] for sp in speakers]
-        ret_ids = {sp_id: i for i, sp_id in enumerate(sp_ids)}
-        part_simmat = np.zeros((Ns, Ns))
-        part_W = np.zeros((Ns, Ns))
-
-        for i, j in itertools.product(sp_ids, sp_ids):
-            row, col = ret_ids[i], ret_ids[j]
-            sim_val = self.simmat[i, j]
-            W_val = self.W[i, j]
-            part_simmat[row, col] = sim_val
-            part_W[row, col] = W_val
-
-        return torch.Tensor(part_simmat).to(self.device), torch.Tensor(part_W).to(self.device)
+        diff = di - dj
+        norm = torch.norm(diff, p=2, dim=1, keepdim=True)
+        return torch.exp(-self.gamma * norm)
 
     def _loss_simmat_re(self, Kd, S, W):
-        Is = torch.eye(W.size(0)).to(self.device)
+        Ns = W.size(0)
+        batch_size = Kd.shape[-1]
+
+        S = S.unsqueeze(2).repeat(1, 1, batch_size)
+        W = W.unsqueeze(2).repeat(1, 1, batch_size)
+        Is = torch.eye(Ns).to(self.device).unsqueeze(2).repeat(1, 1, batch_size)
+
         denom = torch.norm(W - Is, p="fro")
 
-        Kd_tilde = Kd - torch.mul(Kd, Is)
         S_tilde = S - self.max_similarity * Is
+        Kd_tilde = Kd - torch.mul(Kd, Is)
         diff = Kd_tilde - S_tilde
         diff_normed = torch.mul(W, diff)
         numer = torch.norm(diff_normed, p="fro")
@@ -91,25 +84,10 @@ class SimMatrixLoss(nn.Module):
 
         # for utter in d_vectors:
         utter = torch.stack(d_vectors).permute(1, 2, 0)
-        ks = []
-        for i in range(Ns):
-            diff = utter - utter[i]
-            norm = torch.norm(diff, p=2, dim=1, keepdim=True)
-            k = torch.exp(-self.gamma * norm)
-            ks.append(k)
+        ks = [self._gaussian_kernel(utter, utter[i]) for i in range(Ns)]
         gram_matrix = torch.cat(ks, dim=1)
-        gm = gram_matrix.cpu().detach().numpy()
-        pass
 
-        # losses = []
-        # for vecs in d_vectors:
-        #     gram_matrix = torch.zeros(Ns, Ns).to(self.device)
-        #     for i, j in itertools.product(speaker_iter, speaker_iter):
-        #         di, dj = vecs[i], vecs[j]
-        #         gram_matrix[i, j] = self._gaussian_kernel(di, dj)
-        #     part_sim, part_W = self._get_partial_simmatrix(speakers)
-        #     loss = self._loss_simmat_re(gram_matrix, part_sim, part_W)
-        #     losses.append(loss)
-        # ret = torch.sum(torch.stack(losses))
-        # return ret
-        return None
+        part_sim, part_W = self.simmat[:Ns, :Ns], self.W[:Ns, :Ns]
+
+        loss = self._loss_simmat_re(gram_matrix, part_sim, part_W)
+        return loss
