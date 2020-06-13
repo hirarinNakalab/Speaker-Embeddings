@@ -43,10 +43,10 @@ def train():
 
             #get loss, call backward, step optimizer
             loss = simmat_loss(d_vectors)
-            if not torch.isnan(loss):
-                loss.backward()
-                optimizer.step()
-                total_loss = total_loss + loss
+
+            loss.backward()
+            optimizer.step()
+            total_loss = total_loss + loss
 
             iteration += 1
             if (batch_id + 1) % hp.train.log_interval == 0:
@@ -55,7 +55,7 @@ def train():
                        f"Loss:{loss:.4f}\tTotal Loss:{total_loss / (batch_id + 1):.4f}"
                 print(mesg)
 
-        print('='*30)
+        # print('='*30)
 
         if hp.train.checkpoint_dir is not None and (e + 1) % hp.train.checkpoint_interval == 0:
             net.eval().cpu()

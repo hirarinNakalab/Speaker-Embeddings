@@ -34,13 +34,14 @@ def get_para(data, fs):
 def wav_to_mcep(audio_path):
     mceps = []
     for i, utter_path in enumerate(audio_path):
-        # TODO: select only wav more than 50 flames
         wav, source_sr = librosa.load(utter_path, sr=None)
         # Resample the wav to 16kHz
         wav = librosa.resample(wav, source_sr, hp.data.sr)
         wav = wav.astype(np.float)
 
         fo, mcep = get_para(wav, fs=hp.data.sr)
+        if mcep.shape[0] < 50:
+            print("remove {} because of less than 50 frames.".format(utter_path))
         # remove silence using fo info
         mask = fo.astype(np.bool)
         mcep = mcep[mask, 1:]
