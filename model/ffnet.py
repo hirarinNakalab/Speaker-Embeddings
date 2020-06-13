@@ -86,18 +86,30 @@ class SimMatrixLoss(nn.Module):
         return loss
 
 
-    def forward(self, d_vectors, speakers):
-        Ns = len(speakers)
-        speaker_iter = range(Ns)
+    def forward(self, d_vectors):
+        Ns = d_vectors[0].shape[0]
 
-        losses = []
-        for vecs in d_vectors:
-            gram_matrix = torch.zeros(Ns, Ns).to(self.device)
-            for i, j in itertools.product(speaker_iter, speaker_iter):
-                di, dj = vecs[i], vecs[j]
-                gram_matrix[i, j] = self._gaussian_kernel(di, dj)
-            part_sim, part_W = self._get_partial_simmatrix(speakers)
-            loss = self._loss_simmat_re(gram_matrix, part_sim, part_W)
-            losses.append(loss)
-        ret = torch.sum(torch.stack(losses))
-        return ret
+        # for utter in d_vectors:
+        utter = torch.stack(d_vectors).permute(1, 2, 0)
+        ks = []
+        for i in range(Ns):
+            diff = utter - utter[i]
+            norm = torch.norm(diff, p=2, dim=1, keepdim=True)
+            k = torch.exp(-self.gamma * norm)
+            ks.append(k)
+        gram_matrix = torch.cat(ks, dim=1)
+        gm = gram_matrix.cpu().detach().numpy()
+        pass
+
+        # losses = []
+        # for vecs in d_vectors:
+        #     gram_matrix = torch.zeros(Ns, Ns).to(self.device)
+        #     for i, j in itertools.product(speaker_iter, speaker_iter):
+        #         di, dj = vecs[i], vecs[j]
+        #         gram_matrix[i, j] = self._gaussian_kernel(di, dj)
+        #     part_sim, part_W = self._get_partial_simmatrix(speakers)
+        #     loss = self._loss_simmat_re(gram_matrix, part_sim, part_W)
+        #     losses.append(loss)
+        # ret = torch.sum(torch.stack(losses))
+        # return ret
+        return None

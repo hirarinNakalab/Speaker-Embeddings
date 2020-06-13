@@ -69,4 +69,4 @@ class JVSDataset(Dataset):
             d_vector = self._get_dvector(mel)
             d_vectors.append(d_vector)
 
-        return d_vectors, selected_speaker
+        return d_vectors

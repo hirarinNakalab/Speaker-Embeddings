@@ -14,7 +14,7 @@ model:
 ---
 train:
     N : 10 #Number of speakers in batch
-    M : 30 #Number of utterances per speaker in batch
+    M : 4 #Number of utterances per speaker in batch
     num_workers: 0 #number of workers for dataloader
     num_input_size: 5
     num_mel_dim: 39

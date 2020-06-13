@@ -24,7 +24,7 @@ def train():
     spekers_dict = get_speakers_dict()[gender]
 
     train_dataset = JVSDataset(spekers_dict, device, net)
-    train_loader = DataLoader(train_dataset, batch_size=hp.train.N, shuffle=True,
+    train_loader = DataLoader(train_dataset, batch_size=len(train_dataset), shuffle=False,
                               num_workers=hp.train.num_workers, drop_last=True)
 
     simmat_loss = SimMatrixLoss(device, sim_csv_path=sim_csv_path)
@@ -37,13 +37,12 @@ def train():
     print('=' * 30)
     for e in range(hp.train.epochs):
         total_loss = 0
-        for batch_id, batch in enumerate(train_loader):
-            d_vectors, speakers = batch
-
+        for batch_id, d_vectors in enumerate(train_loader):
             #gradient accumulates
             optimizer.zero_grad()
+
             #get loss, call backward, step optimizer
-            loss = simmat_loss(d_vectors, speakers)
+            loss = simmat_loss(d_vectors)
             if not torch.isnan(loss):
                 loss.backward()
                 optimizer.step()
