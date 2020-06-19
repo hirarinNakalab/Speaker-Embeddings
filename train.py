@@ -2,6 +2,7 @@ import os
 import sys
 
 import torch
+import matplotlib.pyplot as plt
 import warnings
 warnings.simplefilter('ignore')
 from torch.utils.data import DataLoader
@@ -38,6 +39,7 @@ def train(gender="female"):
     net.train()
     iteration = 0
     print('=' * 30)
+    losses = []
     for i in range(hp.train.iteration):
         total_loss = 0
         for batch_id, d_vectors in enumerate(train_loader):
@@ -50,7 +52,7 @@ def train(gender="female"):
             loss.backward()
             optimizer.step()
             total_loss = total_loss + loss
-
+            losses.append(loss.item())
             iteration += 1
             if (batch_id + 1) % hp.train.log_interval == 0:
                 mesg = f"Iteration:{iteration}\t" \
@@ -77,6 +79,10 @@ def train(gender="female"):
     torch.save(net.state_dict(), save_model_path)
     
     print("\nDone, trained model saved at", save_model_path)
+    plt.plot(losses)
+    plt.xlabel("Iteration")
+    plt.ylabel("Loss")
+    plt.show()
 
             
 
