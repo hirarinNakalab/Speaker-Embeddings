@@ -82,7 +82,6 @@ class SimMatrixLoss(nn.Module):
     def forward(self, d_vectors):
         Ns = d_vectors[0].shape[0]
 
-        # for utter in d_vectors:
         utter = torch.stack(d_vectors).permute(1, 2, 0)
         ks = [self._gaussian_kernel(utter, utter[i]) for i in range(Ns)]
         gram_matrix = torch.cat(ks, dim=1)

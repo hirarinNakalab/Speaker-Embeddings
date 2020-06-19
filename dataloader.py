@@ -2,11 +2,14 @@ import glob
 import numpy as np
 import os
 import random
+import librosa
 from random import shuffle
+
 import torch
 from torch.utils.data import Dataset
 
 from hparam import hparam as hp
+from preprocess import get_para
 
 
 
@@ -24,16 +27,52 @@ def standardization(x, axis=None, ddof=0):
     x_std = x.std(axis=axis, keepdims=True, ddof=ddof)
     return (x - x_mean) / x_std
 
+def mel_to_tensor(mel, device):
+    flames = mel.shape[0]
+    # reshape to [n_flames, n_input_feat(5*39=195)]
+    mel = mel[:(flames // hp.train.num_input_size) * hp.train.num_input_size, :]
+    mel = mel.reshape(-1, hp.train.num_input_size * hp.train.num_mel_dim)
+    mel = standardization(mel, axis=1)
+    return torch.Tensor(mel).to(device)
 
-class JVSParallel(Dataset):
+def get_dvector(model, utterance):
+    outputs = model(utterance)
+    return torch.mean(outputs, dim=0, keepdim=False)
+
+def audio_to_dvector(audio_path, model, device):
+    wav, source_sr = librosa.load(audio_path, sr=None)
+    # Resample the wav to 16kHz
+    wav = librosa.resample(wav, source_sr, hp.data.sr)
+    wav = wav.astype(np.float)
+
+    fo, mcep = get_para(wav, fs=hp.data.sr)
+
+    # remove silence using fo info
+    mask = fo.astype(np.bool)
+    mcep = mcep[mask, 1:]
+    mel = mel_to_tensor(mcep, device)
+    d_vector = get_dvector(model, mel)
+    return d_vector
+
+
+def utters_to_dvectors(utters, model, device):
+    d_vectors = []
+    for utter in utters:
+        # load utterance spectrogram of selected speaker
+        utterance = np.load(utter)
+        mel = mel_to_tensor(utterance, device)
+        d_vector = get_dvector(model, mel)
+        d_vectors.append(d_vector)
+    return d_vectors
+
+
+
+class JVSNonparaVal(Dataset):
 
     def __init__(self, spekers_dict, device, model):
         # data path
-        self.path = hp.data.train_path if hp.training else hp.data.test_path
-        self.n_train_sp = (len(spekers_dict) // 10) * 9
-        self.index2sp = {index: speaker
-                         for speaker, index in spekers_dict.items()
-                         if index < self.n_train_sp}
+        self.path = hp.data.nonpara_path
+        self.index2sp = {index: speaker for speaker, index in spekers_dict.items()}
         self.input_size = hp.train.num_input_size
         self.mel_dim = hp.train.num_mel_dim
         self.shuffle = shuffle
@@ -43,39 +82,20 @@ class JVSParallel(Dataset):
     def __len__(self):
         return len(self.index2sp)
 
-    def _get_dvector(self, utterance):
-        outputs = self.model(utterance)
-        return torch.mean(outputs, dim=0, keepdim=False)
-
-    def _mel_to_tensor(self, mel):
-        flames = mel.shape[0]
-        # reshape to [n_flames, n_input_feat(5*39=195)]
-        mel = mel[:(flames // self.input_size) * self.input_size, :]
-        mel = mel.reshape(-1, self.input_size * self.mel_dim)
-        mel = standardization(mel, axis=1)
-        return torch.Tensor(mel).to(self.device)
-
     def __getitem__(self, idx):
         selected_speaker = self.index2sp[idx]
 
-        d_vectors = []
         search_path = os.path.join(self.path, selected_speaker, '*.npy')
         # select random utterances
-        utters = random.sample(glob.glob(search_path), hp.train.M)
-        for utter in utters:
-            # load utterance spectrogram of selected speaker
-            utterance = np.load(utter)
-            mel = self._mel_to_tensor(utterance)
-            d_vector = self._get_dvector(mel)
-            d_vectors.append(d_vector)
+        utters = random.sample(glob.glob(search_path), hp.test.M)
+        return utters_to_dvectors(utters, self.model, self.device)
 
-        return d_vectors
 
-class JVSNonpara(Dataset):
+class JVSNonparaTrain(Dataset):
     
     def __init__(self, spekers_dict, device, model):
         # data path
-        self.path = hp.data.train_path if hp.training else hp.data.test_path
+        self.path = hp.data.nonpara_path
         self.n_train_sp = (len(spekers_dict)//10)*9
         self.index2sp = {index: speaker
                          for speaker, index in spekers_dict.items()
@@ -89,18 +109,6 @@ class JVSNonpara(Dataset):
     def __len__(self):
         return len(self.index2sp)
 
-    def _get_dvector(self, utterance):
-        outputs = self.model(utterance)
-        return torch.mean(outputs, dim=0, keepdim=False)
-
-    def _mel_to_tensor(self, mel):
-        flames = mel.shape[0]
-        # reshape to [n_flames, n_input_feat(5*39=195)]
-        mel = mel[:(flames // self.input_size) * self.input_size, :]
-        mel = mel.reshape(-1, self.input_size * self.mel_dim)
-        mel = standardization(mel, axis=1)
-        return torch.Tensor(mel).to(self.device)
-
     def __getitem__(self, idx):
         selected_speaker = self.index2sp[idx]
 
@@ -108,11 +116,4 @@ class JVSNonpara(Dataset):
         search_path = os.path.join(self.path, selected_speaker, '*.npy')
         # select random utterances
         utters = random.sample(glob.glob(search_path), hp.train.M)
-        for utter in utters:
-            # load utterance spectrogram of selected speaker
-            utterance = np.load(utter)
-            mel = self._mel_to_tensor(utterance)
-            d_vector = self._get_dvector(mel)
-            d_vectors.append(d_vector)
-
-        return d_vectors
+        return utters_to_dvectors(utters, self.model, self.device)

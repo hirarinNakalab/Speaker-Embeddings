@@ -9,13 +9,8 @@ data:
     sim_csv_path: 'data/speaker_similarity_{}.csv'
     non_para_contents: 'nonpara30/wav24kHz16bit'
     parallel_contents: 'parallel100/wav24kHz16bit'
-    sr: 16000
----
-model:
-    model_path: './model/ffnet.model' #Model path for testing, inference, or resuming training
 ---
 train:
-    N : 10 #Number of speakers in batch
     M : 4 #Number of utterances per speaker in batch
     num_workers: 0 #number of workers for dataloader
     num_input_size: 5
@@ -24,11 +19,9 @@ train:
     iteration: 700 #Max training speaker epoch
     log_interval: 1 #Epochs before printing progress
     checkpoint_interval: 20 #Save model after x speaker epochs
-    checkpoint_dir: './model'
+    checkpoint_dir: './model/ckpt'
     restore: !!bool "false" #Resume training from previous model path
 ---
 test:
-    N : 4 #Number of speakers in batch
-    M : 6 #Number of utterances per speaker
-    num_workers: 8 #number of workers for data laoder
-    epochs: 10 #testing speaker epochs
+    M : 1 #Number of utterances per speaker
+    num_workers: 0 #number of workers for dataloader
