@@ -6,6 +6,8 @@ import pyworld as pw
 import numpy as np
 import pandas as pd
 from hparam import hparam as hp
+import warnings
+warnings.simplefilter('ignore')
 
 
 
@@ -40,21 +42,20 @@ def wav_to_mcep(audio_path):
         wav = wav.astype(np.float)
 
         fo, mcep = get_para(wav, fs=hp.data.sr)
-        if mcep.shape[0] < 50:
-            print("remove {} because of less than 50 frames.".format(utter_path))
+
         # remove silence using fo info
         mask = fo.astype(np.bool)
         mcep = mcep[mask, 1:]
+        if mcep.shape[0] < 50:
+            print("remove {} because of less than 50 frames.".format(utter_path))
 
         mceps.append(mcep)
     return mceps
 
-
-
 def main():
     print("start text independent utterance feature extraction...\n")
-    os.makedirs(hp.data.train_path, exist_ok=True)   # make folder to save train file
-    os.makedirs(hp.data.test_path, exist_ok=True)    # make folder to save test file
+    os.makedirs(hp.data.nonpara_path, exist_ok=True)   # make folder to save train file
+    os.makedirs(hp.data.parallel_path, exist_ok=True)    # make folder to save test file
 
     genders_dict = get_speakers_dict()
     n_totals = {gender: len(genders_dict[gender])
@@ -69,25 +70,21 @@ def main():
 
     for gender in genders_dict.keys():
         speakers = genders_dict[gender]
-        n_train = n_trains[gender]
         for i, speaker in enumerate(speakers.keys()):
             print("%dth speaker processing..." % (i + 1))
-            speaker_path = os.path.join(hp.unprocessed_data,
-                                        speaker, hp.data.contents, '*.wav')
-            audio_path = glob.glob(speaker_path)
-            mceps = wav_to_mcep(audio_path)
+            for dir, contents, save_path in zip([hp.raw_nonpara_data, hp.raw_parallel_data],
+                                     [hp.data.non_para_contents, hp.data.parallel_contents],
+                                     [hp.data.nonpara_path, hp.data.parallel_path]):
+                speaker_path = os.path.join(dir, speaker, contents, '*.wav')
+                audio_path = glob.glob(speaker_path)
+                mceps = wav_to_mcep(audio_path)
 
-            # save mcep as numpy file
-            save_dir = os.path.join("{}", speaker)
-            save_path = os.path.join(save_dir, "utter{:02d}.npy")
-            if i < n_train:
-                os.makedirs(save_dir.format(hp.data.train_path), exist_ok=True)
+                # save mcep as numpy file
+                save_dir = os.path.join(save_path, speaker)
+                os.makedirs(save_dir, exist_ok=True)
+                fn = os.path.join(save_dir, "utter{:02d}.npy")
                 for i, mcep in enumerate(mceps, start=1):
-                    np.save(save_path.format(hp.data.train_path, i), mcep)
-            else:
-                os.makedirs(save_dir.format(hp.data.test_path), exist_ok=True)
-                for i, mcep in enumerate(mceps, start=1):
-                    np.save(save_path.format(hp.data.test_path, i), mcep)
+                    np.save(fn.format(i), mcep)
 
 
 
