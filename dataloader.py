@@ -4,6 +4,7 @@ import os
 import random
 import librosa
 from random import shuffle
+from numpy.lib.stride_tricks import as_strided
 
 import torch
 from torch.utils.data import Dataset
@@ -28,11 +29,18 @@ def standardization(x, axis=None, ddof=0):
     return (x - x_mean) / x_std
 
 def mel_to_tensor(mel, device):
-    flames = mel.shape[0]
-    # reshape to [n_flames, n_input_feat(5*39=195)]
-    mel = mel[:(flames // hp.train.num_input_size) * hp.train.num_input_size, :]
-    mel = mel.reshape(-1, hp.train.num_input_size * hp.train.num_mel_dim)
-    mel = standardization(mel, axis=1)
+    n_flames = mel.shape[0]
+    shape = (n_flames - hp.train.num_input_size + 1,
+             hp.train.num_input_size,
+             hp.train.num_mel_dim)
+
+    strides = mel.strides
+    stride_shape = (strides[0], strides[0], strides[1])
+
+    strided = as_strided(mel, shape=shape, strides=stride_shape)
+    strided = strided.reshape(shape[0], -1)
+
+    mel = standardization(strided, axis=1)
     return torch.Tensor(mel).to(device)
 
 def get_dvector(model, utterance):
