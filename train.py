@@ -1,4 +1,6 @@
 import os
+import sys
+
 import torch
 import warnings
 warnings.simplefilter('ignore')
@@ -79,4 +81,8 @@ def train(gender="female"):
             
 
 if __name__=="__main__":
-    train(gender="female")
+    if len(sys.argv) > 1:
+        gender = sys.argv[1]
+    else:
+        sys.exit()
+    train(gender=gender)
