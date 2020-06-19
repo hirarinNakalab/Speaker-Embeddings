@@ -28,7 +28,7 @@ def main(gender="female", user_audio=""):
     device = torch.device(hp.device)
 
     net = FFNet().to(device)
-    net.load_state_dict(torch.load(model_path=movel_path))
+    net.load_state_dict(torch.load(movel_path))
     net.eval()
 
     spekers_dict = get_speakers_dict()[gender]
@@ -36,19 +36,19 @@ def main(gender="female", user_audio=""):
     utters = []
     for speaker in spekers_dict.keys():
         search_path = os.path.join(hp.data.parallel_path, speaker, '*.npy')
-        utter = random.sample(glob.glob(search_path), 1)
+        utter = random.sample(glob.glob(search_path), 1)[0]
         utters.append(utter)
-    d_vectors = utters_to_dvectors(utters)
-    d_vectors.append(audio_to_dvector(user_audio))
+    d_vectors = utters_to_dvectors(utters, net, device)
+    d_vectors.append(audio_to_dvector(user_audio, net, device))
 
     Ns = len(d_vectors)
-    utter = torch.stack(d_vectors).permute(1, 2, 0)
+    utter = torch.stack(d_vectors)
     ks = [gausian_kernel(utter, utter[i]) for i in range(Ns)]
     gram_matrix = torch.cat(ks, dim=1)
     gram_matrix = gram_matrix.cpu().detach().numpy()
 
     user_name = os.path.basename(user_audio).split(".")[0]
-    speakers = [speaker for speaker in spekers_dict.keys()] + user_name
+    speakers = [speaker for speaker in spekers_dict.keys()] + [user_name]
     simmat = pd.DataFrame(data=gram_matrix, index=speakers, columns=None)
     simmat.to_csv(f"simmat_{user_name}.csv", index=True, header=False)
 

@@ -9,6 +9,7 @@ data:
     sim_csv_path: 'data/speaker_similarity_{}.csv'
     non_para_contents: 'nonpara30/wav24kHz16bit'
     parallel_contents: 'parallel100/wav24kHz16bit'
+    sr: 16000
 ---
 train:
     M : 4 #Number of utterances per speaker in batch
