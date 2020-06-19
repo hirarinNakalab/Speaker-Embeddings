@@ -27,7 +27,7 @@ def train(gender="female"):
     train_loader = DataLoader(train_dataset, batch_size=len(train_dataset), shuffle=False,
                               num_workers=hp.train.num_workers, drop_last=True)
     val_dataset = JVSNonparaVal(spekers_dict, device, net)
-    val_loader = DataLoader(train_dataset, batch_size=len(val_dataset), shuffle=False,
+    val_loader = DataLoader(val_dataset, batch_size=len(val_dataset), shuffle=False,
                               num_workers=hp.test.num_workers, drop_last=True)
 
     simmat_loss = SimMatrixLoss(device, sim_csv_path=sim_csv_path)
@@ -55,13 +55,13 @@ def train(gender="female"):
             if (batch_id + 1) % hp.train.log_interval == 0:
                 mesg = f"Iteration:{iteration}\t" \
                        f"Loss:{loss:.4f}\tTotal Loss:{total_loss / (batch_id + 1):.4f}"
-                print(mesg)
+                print(mesg, end="\t")
 
         for batch_id, d_vectors in enumerate(val_loader):
             with torch.no_grad():
                 loss = simmat_loss(d_vectors)
                 if (batch_id + 1) % hp.train.log_interval == 0:
-                    print(f"Iteration:{iteration}\tVal Loss:{loss:.4f}\t")
+                    print(f"Val Loss:{loss:.4f}\t")
 
         if hp.train.checkpoint_dir is not None and (i + 1) % hp.train.checkpoint_interval == 0:
             net.eval().cpu()
