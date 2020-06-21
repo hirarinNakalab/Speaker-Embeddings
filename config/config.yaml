@@ -1,4 +1,4 @@
-device: "cuda"
+device: "cpu" # cuda or cpu
 training: !!bool "true"
 raw_nonpara_data: '../japanese_speech_corpus/jvs_ver1/'
 raw_parallel_data: '../japanese_speech_corpus/jvs_hiho_ver1/'
@@ -26,3 +26,4 @@ train:
 test:
     M : 1 #Number of utterances per speaker
     num_workers: 0 #number of workers for dataloader
+    simmat_dir: 'output'

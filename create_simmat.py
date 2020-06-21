@@ -50,7 +50,11 @@ def main(gender="female", user_audio=""):
     user_name = os.path.basename(user_audio).split(".")[0]
     speakers = [speaker for speaker in spekers_dict.keys()] + [user_name]
     simmat = pd.DataFrame(data=gram_matrix, index=speakers, columns=None)
-    simmat.to_csv(f"simmat_{user_name}.csv", index=True, header=False)
+
+    os.makedirs(hp.test.simmat_dir, exist_ok=True)
+    fn = os.path.join(hp.test.simmat_dir, f"simmat_{user_name}.csv")
+    simmat.to_csv(fn, index=True, header=False)
+    print("output: ", fn)
 
 
 if __name__ == "__main__":
