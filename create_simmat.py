@@ -73,8 +73,8 @@ if __name__ == "__main__":
         user_audio = sys.argv[1]
         gender = sys.argv[2]
     else:
-        # user_audio = "../japanese_speech_corpus/jsut_ver1.1/voiceactress100/wav/VOICEACTRESS100_001.wav"
-        user_audio = ""
+        user_audio = "../japanese_speech_corpus/jsut_ver1.1/voiceactress100/wav/VOICEACTRESS100_001.wav"
+        # user_audio = ""
         gender = "female"
 
     main(gender=gender, user_audio=user_audio)
