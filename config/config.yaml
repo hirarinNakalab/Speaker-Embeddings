@@ -2,6 +2,7 @@ device: "cpu" # cuda or cpu
 training: !!bool "true"
 raw_nonpara_data: '../japanese_speech_corpus/jvs_ver1/'
 raw_parallel_data: '../japanese_speech_corpus/jvs_hiho_ver1/'
+actors_data: 'data/actors_voice'
 ---
 data:
     nonpara_path: './data/nonpara'
