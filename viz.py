@@ -2,7 +2,7 @@ import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-import sklearn.decomposition as dc
+import sklearn.manifold as mf
 
 from hparam import hparam as hp
 
@@ -23,8 +23,8 @@ if __name__ == '__main__':
 
     DATANUM = len(DATA)
 
-    pca = dc.PCA(n_components=2)
-    pos = pca.fit_transform(DATA)
+    mds = mf.MDS(n_components=2, dissimilarity="precomputed", random_state=6)
+    pos = mds.fit_transform(DATA)
 
     SUM=np.sum(pos, axis=0)
     AVE=SUM/DATANUM

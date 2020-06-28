@@ -86,7 +86,19 @@ def main():
                 for i, mcep in enumerate(mceps, start=1):
                     np.save(fn.format(i), mcep)
 
+def create_actors_data():
+    search_path = os.path.join(hp.actors_data, 'wav', '*.wav')
+    for wavfile in glob.glob(search_path):
+        mceps = wav_to_mcep([wavfile])
+        # save mcep as numpy file
+        save_dir = os.path.join(hp.actors_data, 'melcp')
+        os.makedirs(save_dir, exist_ok=True)
+        fn = os.path.join(save_dir,
+                          os.path.basename(wavfile).split(".")[0]+".npy")
+        for mcep in mceps:
+            np.save(fn, mcep)
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    create_actors_data()

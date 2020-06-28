@@ -45,12 +45,13 @@ def main(gender="female", user_audio="", validation=False):
     else:
         d_vectors, speakers = [], []
         user_name = "actors"
-        search_path = os.path.join(hp.actors_data, '*.wav')
-        for wavfile in glob.glob(search_path):
-            speakers.append(os.path.basename(wavfile).split(".")[0])
-            d_vectors.append(audio_to_dvector(wavfile, net, device))
+        search_path = os.path.join(hp.actors_data, 'melcp', '*.npy')
+        for melcp in glob.glob(search_path):
+            speakers.append(os.path.basename(melcp).split(".")[0])
+            d_vectors.append(utters_to_dvectors([melcp], net, device)[0])
 
     if user_audio != "":
+        speakers.append(os.path.basename(user_audio).split(".")[0])
         d_vectors.append(audio_to_dvector(user_audio, net, device))
 
     Ns = len(d_vectors)
